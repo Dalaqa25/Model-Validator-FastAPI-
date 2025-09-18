@@ -1,28 +1,32 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-import os
-import shutil
+import os, zipfile, tempfile
 
 app = FastAPI()
-UPLOAD_DIR = "uploads"
-MAX_FILE_SIZE = 10 * 1024 * 1024
 
-@app.post("/upload_file")
-async def upload_file(file: UploadFile = File(...)):
-    contents = await file.read()
-    size = len(contents)
+@app.post("/model-upload")
+async def model_upload(file: UploadFile = File(...)):
+    # 1. Check extension
+    if not file.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Only .zip files are allowed")
 
-    if size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File size is not supprted (choose blow 10mb)")
-    
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    file_path = os.path.jion(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as f:
-        f.write(contents)
+    # 2. Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
 
+    extracted_files = []
+    extract_dir = tempfile.mkdtemp()
+
+    # 3. Unzip
+    with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_dir)
+        extracted_files = zip_ref.namelist()
+
+    # 4. Clean up uploaded zip (optional, keep extracted dir for validation)
+    os.remove(tmp_path)
 
     return {
-        "filename": file.filename,
-        "size_bytes": size,
-        "content_type": file.content_type,
-        "path": file_path
+        "uploaded": file.filename,
+        "extracted_to": extract_dir,
+        "files_inside": extracted_files
     }
