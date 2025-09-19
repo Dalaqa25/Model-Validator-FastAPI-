@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from .framework_extentions import extension_mapping
 
 def validate_model_zip(extracted_files):
     # ------ მარტივი ფაილის ვალიდაციები ------
@@ -13,14 +14,21 @@ def validate_model_zip(extracted_files):
             raise HTTPException(status_code=400, detail=f"Bad file found: {file}")
 
     # შევამოწმოთ ფაილი შეიცავს თუ არა მოდელის ფორმატებს
-    KNOWN_MODEL_EXTENSIONS = (".pt", ".onnx", ".pkl", ".h5", ".joblib", ".bin", ".safetensors")
+    KNOWN_MODEL_EXTENSIONS = tuple(extension_mapping.keys())
     KNOWN_MODEL_FILES = ("pytorch_model.bin", "saved_model.pb")
-    model_files_found = [
-        file for file in extracted_files
-        if file.endswith(KNOWN_MODEL_EXTENSIONS) or file in KNOWN_MODEL_FILES
-    ]
+    model_files_found = []
+    model_frameworks = {}
 
-    if not model_files_found:
-        raise HTTPException(status_code=400, detail="No model files found in the zip file")
-
-    return model_files_found
+    for file in extracted_files:
+        if file.endswith(KNOWN_MODEL_EXTENSIONS):
+            model_files_found.append(file)
+            # განვსაზღვროთ რომელ framework ეკუთვის ფაილი
+            for ext, framework in extension_mapping.items():
+                if file.lower().endswith(ext):
+                     model_frameworks[file] = framework
+                break
+            
+            if not model_files_found:
+                raise HTTPException(status_code=400, detail="No model files found in the zip file")
+            
+            return model_files_found, model_frameworks
