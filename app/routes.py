@@ -17,10 +17,10 @@ async def model_upload(file: UploadFile = File(...)):
     extracted_files = utils.list_zip_contents(contents)
 
     # ვალიდაციის ლოგიკა validator.py-დან
-    model_files_found = validate_model_zip(extracted_files)
+    model_frameworks = validate_model_zip(extracted_files)
+    unique_frameworks = list(set(model_frameworks.values()))
 
     return {
         "uploaded": file.filename,
-        "files_inside": extracted_files,
-        "model_files_found": model_files_found
+        "frameworks": unique_frameworks
     }

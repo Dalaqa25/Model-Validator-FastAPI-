@@ -27,7 +27,7 @@ def validate_model_zip(extracted_files):
                     break
 
     if not model_files_found:
-        message = f"No model files found in the zip file. Extracted files: {extracted_files}"
+        message = f"No model files found in the zip file."
         try:
             ai_suggestion = ask_openrouter(message)
             if ai_suggestion:
